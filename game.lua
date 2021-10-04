@@ -134,7 +134,7 @@ physics.addBody(bottomWall, "static", {density=0, friction = 0.3, bounce=.2, fil
 
 
 
-	local triangleShape = { 0,200, 37,30, -37,30 } 
+	local triangleShape = { 0,-40, 37,40, -37,40 } 
 	triangle = display.newPolygon(halfW, 0, triangleShape);
 
 	--triangle = display.newRect( 0, 0, 100, 100 )
@@ -142,11 +142,9 @@ physics.addBody(bottomWall, "static", {density=0, friction = 0.3, bounce=.2, fil
 	triangle.y = 300
 	triangle.rotation = 0
 	--define the shape table (once created, this can be used multiple times)
-	physics.addBody( triangle, { shape=triangleShape, density=3.0, friction=0.0, bounce=0.2 })
-	triangle.linearDamping = 3.0
+	physics.addBody( triangle, { shape=triangleShape, density=3.0, friction=0.0, bounce=0.8 })
+	triangle.linearDamping = 1.0
 	triangle.angularDamping = 4.0
-	triangle.linearDamping = 0.0
-	triangle.angularDamping = 0.0
 
 
 	-- add physics to the crate
