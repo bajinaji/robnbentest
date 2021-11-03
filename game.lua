@@ -301,7 +301,7 @@ function createLandscape()
     -- Create landing pad
     local landingPadWidth = 200
     local lx = math.random(0, gg.screenWidth - landingPadWidth)
-    local ly = screenH - 400 + math.random(-200, 200)
+    local ly = display.viewableContentHeight - 400 + math.random(-200, 200)
     local line = display.newLine(lx, ly, lx + landingPadWidth, ly)
     line.name = "landing"
     line:setStrokeColor(0, 1, 0, 1)
@@ -340,8 +340,8 @@ function appendLineWithinScreen(x, y, direction)
     end
 
     local y2 = y + math.random(-100, 100)
-    if y2 > gg.screenBottom then
-        y2 = gg.screenBottom
+    if y2 > display.viewableContentHeight - 80 then
+        y2 = display.viewableContentHeight - 80
     elseif y2 < 0 then
         y2 = 0
     end
@@ -372,7 +372,7 @@ function scene:show(event)
         physics.start()
         physics.setGravity(0, 9.8)
 
-        --Runtime:addEventListener("key", onKeyEvent)
+        Runtime:addEventListener("key", onKeyEvent)
     end
 end
 
