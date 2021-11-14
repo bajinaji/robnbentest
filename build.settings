@@ -37,6 +37,12 @@ settings =
 		},
 	},
 
+	win32 =
+    {
+        -- Settings for Win32 apps go here
+        preferenceStorage = "sqlite",
+    },
+
 	--
 	-- Plugins section
 	--
