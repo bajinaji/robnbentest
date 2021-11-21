@@ -4,8 +4,6 @@
 --
 -----------------------------------------------------------------------------------------
 
-print("Processing game.lua")
-
 local composer = require("composer")
 local scene = composer.newScene()
 
@@ -25,13 +23,15 @@ local landscape = require("landscape")
 local landingSpeeds = {
     PERFECT_LANDING = 30,
     GOOD_LANDING = 100,
-    OK_LANDING = 200
+    OK_LANDING = 200,
+    FAILED_LANDING = 10000
 }
 
 local landingRotations = {
-    PERFECT_LANDING = 5,
-    GOOD_LANDING = 10,
-    OK_LANDING = 20    
+    PERFECT_LANDING = 8,
+    GOOD_LANDING = 13,
+    OK_LANDING = 20,
+    FAILED_LANDING = 10000
 }
 
 
@@ -52,8 +52,6 @@ math.randomseed(os.time())
 local screenW, screenH, halfW = display.actualContentWidth,
                                 display.actualContentHeight,
                                 display.contentCenterX
-
-print("Set a few variables")
 
 local function rotateVertices(v, angle)
     angle = math.rad(angle)
@@ -114,8 +112,6 @@ function applyForce(obj)
 end
 
 function createBoundaries()
-    print("Caalling create boundaries")
-
     local leftWall = display.newRect(gg.screenLeft - 25, gg.centerY, 50,
                                      gg.screenHeight)
     physics.addBody(leftWall, "static", {
@@ -170,20 +166,22 @@ local function resetShip()
     })    
 end
 
-local function landRestoreShip()
+local function landRestoreShip(event)
+    local params = event.source.params
     local text
-    local speed = triangle:getLinearVelocity()
-    if speed < landingSpeeds.PERFECT_LANDING then
+    local rotationRating = triangle:rotationRatingForLanding()
+    print("rotationRating:"..rotationRating)
+    if params.speed <= landingSpeeds.PERFECT_LANDING and rotationRating == landingRotations.PERFECT_LANDING then
         text = "Perfect landing"
         score = score + 100
-    elseif speed < landingSpeeds.GOOD_LANDING then
+    elseif params.speed <= landingSpeeds.GOOD_LANDING and rotationRating == landingRotations.GOOD_LANDING then
         text = "Great landing"
         score = score + 40
     else
         text = "Decent landing"
         score = score + 10
     end
-    text = text.." "..speed
+    text = text.." ("..string.format("%2d", params.speed)..")"
 
     triangle.rotation = 0
     triangle.angularVelocity = 0
@@ -233,17 +231,19 @@ local function onPlayerColliderGround(self, event)
         if (event.phase == "began") then
 
             local tooMuch = false
-            -- if
 
             if event.other.name == "landing" then
-
-                if (triangle.rotation < -landingRotations.OK_LANDING or triangle.rotation > landingRotations.OK_LANDING) then
+                -- Ch
+                local landingSpeed = vectorLength(triangle:getLinearVelocity())
+                if triangle:rotationRatingForLanding() == landingRotations.FAILED_LANDING then
                     tooMuch = true
-                elseif vectorLength(triangle:getLinearVelocity()) > landingSpeeds.OK_LANDING then
+                elseif landingSpeed > landingSpeeds.OK_LANDING then
                     tooMuch = true
+                -- If landing successful
                 else
                     died = true
-                    timer.performWithDelay(0, landRestoreShip)
+                    local tm = timer.performWithDelay(0, landRestoreShip)
+                    tm.params = { speed = landingSpeed, rotation = triangle.rotation }
                 end
             end
 
@@ -268,9 +268,6 @@ local function onPlayerColliderGround(self, event)
 end
 
 function scene:create(event)
-
-    print("Calling scene:create")
-
     livesText = display.newText(uiGroup, "Lives: " .. lives, 200, 80,
                                 native.systemFont, 36)
     scoreText = display.newText(uiGroup, "Score: " .. score, 400, 80,
@@ -312,7 +309,25 @@ function scene:create(event)
 
     rotateVertices(triangleShape, 0)
 
-    triangle = display.newPolygon(halfW, 0, triangleShape);
+    triangle = display.newPolygon(halfW, 0, triangleShape)
+
+    function triangle.rotationRatingForLanding(self)
+        print(self.rotation)
+        if self.rotation >= -landingRotations.PERFECT_LANDING and self.rotation <= landingRotations.PERFECT_LANDING then
+            print("perfect rotation")
+            return landingRotations.PERFECT_LANDING
+        elseif self.rotation >= -landingRotations.GOOD_LANDING and self.rotation <= landingRotations.GOOD_LANDING then
+            print("good rotation")
+            return landingRotations.GOOD_LANDING
+        elseif self.rotation >= -landingRotations.OK_LANDING and self.rotation <= landingRotations.OK_LANDING then
+            print("ok rotation")
+            return landingRotations.OK_LANDING
+        else
+            print("bad rotation")
+            return 0
+        end
+    end
+
     triangle.x = 200
     triangle.y = 300
     triangle.rotation = 0
@@ -339,8 +354,6 @@ function scene:create(event)
 end
 
 function scene:show(event)
-    print("calling scene:show")
-
     local sceneGroup = self.view
     local phase = event.phase
 
@@ -359,8 +372,6 @@ function scene:show(event)
 end
 
 function scene:hide(event)
-    print("calling scene:hide")
-
     local sceneGroup = self.view
 
     local phase = event.phase
@@ -378,8 +389,6 @@ function scene:hide(event)
 end
 
 function scene:destroy(event)
-    print("calling scene:destroy")
-
     -- Called prior to the removal of scene's "view" (sceneGroup)
     --
     -- INSERT code here to cleanup the scene
@@ -392,7 +401,6 @@ end
 
 ---------------------------------------------------------------------------------
 
-print("Adding listeners")
 -- Listener setup
 scene:addEventListener("create", scene)
 scene:addEventListener("show", scene)
@@ -400,10 +408,5 @@ scene:addEventListener("hide", scene)
 scene:addEventListener("destroy", scene)
 
 -----------------------------------------------------------------------------------------
-
-
-
-
-print("returning scene")
 
 return scene

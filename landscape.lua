@@ -4,26 +4,30 @@ local lines = {}
 
 function appendLineWithinScreen(x, y, direction)
     local x2
+    local xMinSpread = 15
+    local xMaxSpread = 50
+    local yMinSpread = 100
+    local yMaxSpread = 100
     if direction == 1 then
-        x2 = x + math.random(20, 100)
+        x2 = x + math.random(xMinSpread, xMaxSpread)
     else
-        x2 = x + math.random(-100, -20)
+        x2 = x + math.random(-xMaxSpread, -xMinSpread)
     end
 
     if direction == 1 and x2 > display.viewableContentWidth - 1 then
-        x2 = display.viewableContentWidth
+        x2 = display.viewableContentWidth - 1
     elseif direction == -1 and x2 < 0 then
         x2 = 0
     end
 
-    local y2 = y + math.random(-100, 100)
+    local ydir = math.random(1, 2)
+    if(ydir == 2) then ydir = -1 end
+    local y2 = y + math.random(yMinSpread, yMaxSpread) * ydir
     if y2 > display.viewableContentHeight-1 then
         y2 = display.viewableContentHeight - 1
     elseif y2 < 0 then
         y2 = 0
     end
-
-	print(x..","..y..","..x2..","..y2)
 
     local line = display.newLine(x, y, x2, y2)
     line:setStrokeColor(1, 1, 1, 1)
@@ -42,12 +46,9 @@ function appendLineWithinScreen(x, y, direction)
 end
 
 function createLandscape()
-    print("Calling create landscape")
-
     clearLines()
 
     -- Create landing pad
-    print("Creating landing pad")
     local landingPadWidth = 200
     local lx = math.random(landingPadWidth, display.viewableContentWidth - landingPadWidth)
     local ly = display.viewableContentHeight - 400 + math.random(-200, 200)
@@ -63,6 +64,8 @@ function createLandscape()
     })
     table.insert(lines, line)
 
+    triangle.x = lx + landingPadWidth / 2
+
     print("Looping and creating landscape around landing pad")
     print("Width of screen:"..display.actualContentWidth)
     -- Create landscape around landing pad
@@ -70,7 +73,6 @@ function createLandscape()
     local x = lx + landingPadWidth
     y = ly
     while (x < display.actualContentWidth - 1) do 
-		print("appending line to right from x:"..x..",y:"..y)
     	x, y = appendLineWithinScreen(x, y, 1) 
    	end
 
@@ -78,7 +80,6 @@ function createLandscape()
     x = lx
     y = ly
     while (x > 0) do 
-    	print("appending line to left from x:"..x..",y:"..y)
     	x, y = appendLineWithinScreen(x, y, -1) 
     end
 

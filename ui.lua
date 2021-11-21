@@ -11,7 +11,6 @@ local ui = {
 }
 
 function ui.loadGraphics()
-    print("calling ui.loadGraphics")
     local x = display.screenOriginX + display.viewableContentWidth / 2
     -- Load Left Arrow Button
     ui.leftButton = display.newImageRect(ui.leftButtonImage, 56, 64)
