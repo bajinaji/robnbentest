@@ -10,7 +10,7 @@ local scene = composer.newScene()
 -- include Corona's "physics" library
 local physics = require "physics"
 
-local gg = require("common")
+local displayConfig = require("displayConfig")
 
 local ui = require("ui")
 
@@ -21,7 +21,7 @@ local landscape = require("landscape")
 --require "class.class"
 
 local landingSpeeds = {
-    PERFECT_LANDING = 30,
+    PERFECT_LANDING = 50,
     GOOD_LANDING = 100,
     OK_LANDING = 200,
     FAILED_LANDING = 10000
@@ -32,6 +32,12 @@ local landingRotations = {
     GOOD_LANDING = 13,
     OK_LANDING = 20,
     FAILED_LANDING = 10000
+}
+
+local shipStatus = {
+    ALIVE = 0,
+    DIED = 1,
+    LANDED = 2
 }
 
 
@@ -47,11 +53,6 @@ local score = 0
 local died = false
 
 math.randomseed(os.time())
-
--- forward declarations and other locals
-local screenW, screenH, halfW = display.actualContentWidth,
-                                display.actualContentHeight,
-                                display.contentCenterX
 
 local function rotateVertices(v, angle)
     angle = math.rad(angle)
@@ -112,16 +113,17 @@ function applyForce(obj)
 end
 
 function createBoundaries()
-    local leftWall = display.newRect(gg.screenLeft - 25, gg.centerY, 50,
-                                     gg.screenHeight)
+    local wallSize = 50
+    local leftWall = display.newRect(displayConfig.screenLeft - (wallSize/2) + 1, displayConfig.screenCenterY, wallSize,
+                                     displayConfig.screenHeight)
     physics.addBody(leftWall, "static", {
         density = 0,
         friction = 0.3,
         bounce = .2,
         filter = WallCollisionFilter
     })
-    local rightWall = display.newRect(gg.screenWidth + 26, gg.centerY, 50,
-                                      gg.screenHeight)
+    local rightWall = display.newRect(displayConfig.screenWidth + (wallSize/2) - 1, displayConfig.screenCenterY, wallSize,
+                                      displayConfig.screenHeight)
     physics.addBody(rightWall, "static", {
         density = 0,
         friction = 0.3,
@@ -129,16 +131,16 @@ function createBoundaries()
         filter = WallCollisionFilter
     })
 
-    local topWall = display.newRect(gg.centerX, gg.screenTop - 26,
-                                    gg.screenWidth, 50)
+    local topWall = display.newRect(displayConfig.screenCenterX, displayConfig.screenTop - (wallSize/2+1),
+                                    displayConfig.screenWidth, wallSize)
     physics.addBody(topWall, "static", {
         density = 0,
         friction = 0.3,
         bounce = .2,
         filter = WallCollisionFilter
     })
-    local bottomWall = display.newRect(gg.centerX, gg.screenBottom + 25,
-                                       gg.screenWidth, 50)
+    local bottomWall = display.newRect(displayConfig.screenCenterX, displayConfig.screenBottom + (wallSize/2-1),
+                                       displayConfig.screenWidth, wallSize)
     physics.addBody(bottomWall, "static", {
         density = 0,
         friction = 0.3,
@@ -149,7 +151,7 @@ end
 
 local function resetShip()
     triangle.isBodyActive = false
-    triangle.x = display.contentCenterX
+    triangle.x = displayConfig.screenCenterX
     triangle.y = 100
     triangle.rotation = 0
     triangle.angularVelocity = 0
@@ -169,30 +171,31 @@ end
 local function landRestoreShip(event)
     local params = event.source.params
     local text
-    local rotationRating = triangle:rotationRatingForLanding()
-    print("rotationRating:"..rotationRating)
-    if params.speed <= landingSpeeds.PERFECT_LANDING and rotationRating == landingRotations.PERFECT_LANDING then
+
+        print("rotationRating:"..params.rotationRating)
+        print("speed:"..string.format("%2d", params.speed))
+
+    if params.speed <= landingSpeeds.PERFECT_LANDING and params.rotationRating == landingRotations.PERFECT_LANDING then
         text = "Perfect landing"
         score = score + 100
-    elseif params.speed <= landingSpeeds.GOOD_LANDING and rotationRating == landingRotations.GOOD_LANDING then
-        text = "Great landing"
+    elseif params.speed <= landingSpeeds.GOOD_LANDING and (params.rotationRating <= landingRotations.GOOD_LANDING) then
+        text = "Good landing"
         score = score + 40
     else
-        text = "Decent landing"
+        text = "Okay landing"
         score = score + 10
     end
-    text = text.." ("..string.format("%2d", params.speed)..")"
+     print("rating:"..text)
 
     triangle.rotation = 0
     triangle.angularVelocity = 0
     triangle:setLinearVelocity(0, 0)
 
-    local successText = display.newText(uiGroup, text, display.contentCenterX, display.contentCenterY,
+    local successText = display.newText(uiGroup, text, displayConfig.screenCenterX, displayConfig.screenCenterY,
                                 native.systemFont, 36)
     successText.alpha = 0
 
 
-    -- Fade in the ship
     transition.to(successText, {
         alpha = 1,
         time = 500,
@@ -235,16 +238,16 @@ local function onPlayerColliderGround(self, event)
             if event.other.name == "landing" then
                 -- Ch
                 local landingSpeed = vectorLength(triangle:getLinearVelocity())
-                if triangle:rotationRatingForLanding() == landingRotations.FAILED_LANDING then
-                    tooMuch = true
-                elseif landingSpeed > landingSpeeds.OK_LANDING then
-                    tooMuch = true
+                --if triangle:rotationRatingForLanding() == landingRotations.FAILED_LANDING then
+                --    tooMuch = true
+                --elseif landingSpeed > landingSpeeds.OK_LANDING then
+                    --tooMuch = true
                 -- If landing successful
-                else
+                --else
                     died = true
                     local tm = timer.performWithDelay(0, landRestoreShip)
-                    tm.params = { speed = landingSpeed, rotation = triangle.rotation }
-                end
+                    tm.params = { speed = landingSpeed, rotationRating = triangle:rotationRatingForLanding() }
+                --end
             end
 
             if event.other.name == "ground" or tooMuch then
@@ -265,6 +268,29 @@ local function onPlayerColliderGround(self, event)
         elseif (event.phase == "ended") then
         end
     end
+end
+
+
+function createShip()
+    local triangleShape = {0, -40, 37, 40, -37, 40}
+    rotateVertices(triangleShape, 0)
+    triangle = display.newPolygon(displayConfig.screenCenterX, 0, triangleShape)
+    triangle.status = shipStatus.ALIVE;
+
+    -- Assign a landing status based on the current rotation of the player object
+    function triangle.rotationRatingForLanding(self)
+        if self.rotation >= -landingRotations.PERFECT_LANDING and self.rotation <= landingRotations.PERFECT_LANDING then
+            return landingRotations.PERFECT_LANDING
+        elseif self.rotation >= -landingRotations.GOOD_LANDING and self.rotation <= landingRotations.GOOD_LANDING then
+            return landingRotations.GOOD_LANDING
+        elseif self.rotation >= -landingRotations.OK_LANDING and self.rotation <= landingRotations.OK_LANDING then
+            return landingRotations.OK_LANDING
+        else
+            return landingRotations.FAILED_LANDING
+        end
+    end
+
+    return triangle
 end
 
 function scene:create(event)
@@ -293,40 +319,19 @@ function scene:create(event)
 
     createBoundaries()
 
-    -- physics.setDrawMode("hybrid")
+    physics.setDrawMode("hybrid")
 
     -- create a grey rectangle as the backdrop
     -- the physical screen will likely be a different shape than our defined content area
     -- since we are going to position the background from it's top, left corner, draw the
     -- background at the real top, left corner.
-    local background = display.newRect(display.screenOriginX,
-                                       display.screenOriginY, screenW, screenH)
+    local background = display.newRect(displayConfig.screenLeft,
+                                       displayConfig.screenTop, displayConfig.screenWidth, displayConfig.screenHeight)
     background.anchorX = 0
     background.anchorY = 0
     background:setFillColor(.5)
 
-    local triangleShape = {0, -40, 37, 40, -37, 40}
-
-    rotateVertices(triangleShape, 0)
-
-    triangle = display.newPolygon(halfW, 0, triangleShape)
-
-    function triangle.rotationRatingForLanding(self)
-        print(self.rotation)
-        if self.rotation >= -landingRotations.PERFECT_LANDING and self.rotation <= landingRotations.PERFECT_LANDING then
-            print("perfect rotation")
-            return landingRotations.PERFECT_LANDING
-        elseif self.rotation >= -landingRotations.GOOD_LANDING and self.rotation <= landingRotations.GOOD_LANDING then
-            print("good rotation")
-            return landingRotations.GOOD_LANDING
-        elseif self.rotation >= -landingRotations.OK_LANDING and self.rotation <= landingRotations.OK_LANDING then
-            print("ok rotation")
-            return landingRotations.OK_LANDING
-        else
-            print("bad rotation")
-            return 0
-        end
-    end
+    triangle = createShip()
 
     triangle.x = 200
     triangle.y = 300

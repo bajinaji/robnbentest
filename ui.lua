@@ -1,3 +1,4 @@
+local displayConfig = require("displayConfig")
 
 local ui = {
 
@@ -11,28 +12,28 @@ local ui = {
 }
 
 function ui.loadGraphics()
-    local x = display.screenOriginX + display.viewableContentWidth / 2
+    local x = displayConfig.screenLeft + displayConfig.screenWidth / 2
     -- Load Left Arrow Button
     ui.leftButton = display.newImageRect(ui.leftButtonImage, 56, 64)
     ui.leftButton.x = x - 380
-    ui.leftButton.y = display.viewableContentHeight
     ui.leftButton.alpha = .3
     ui.leftButton:scale( 2,2 )
+    ui.leftButton.y = displayConfig.screenHeight - ui.leftButton.height
 
     -- Load Boost Button
     ui.boostButton = display.newImageRect(ui.buttonImage, 75, 75)
     ui.boostButton.x = x
-    ui.boostButton.y = display.viewableContentHeight
     ui.boostButton.alpha = .3
     ui.boostButton:scale( 2,2 )
+    ui.boostButton.y = displayConfig.screenHeight - ui.boostButton.height
+    
 
     -- Load Right Arrow Button
     ui.rightButton = display.newImageRect(ui.rightButtonImage, 56, 64)
     ui.rightButton.x = x + 380
-    ui.rightButton.y = display.viewableContentHeight
     ui.rightButton.alpha = .3
     ui.rightButton:scale( 2,2 )
-
+    ui.rightButton.y = displayConfig.screenHeight - ui.rightButton.height
 
     ui.leftButton.touch = onLeftButtonTouch
     ui.leftButton:addEventListener("touch", ui.leftButton)

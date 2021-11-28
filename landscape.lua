@@ -1,4 +1,4 @@
-local gg = require("common")
+local displayConfig = require("displayConfig")
 
 local lines = {}
 
@@ -14,8 +14,8 @@ function appendLineWithinScreen(x, y, direction)
         x2 = x + math.random(-xMaxSpread, -xMinSpread)
     end
 
-    if direction == 1 and x2 > display.viewableContentWidth - 1 then
-        x2 = display.viewableContentWidth - 1
+    if direction == 1 and x2 > displayConfig.screenWidth - 1 then
+        x2 = displayConfig.screenWidth - 1
     elseif direction == -1 and x2 < 0 then
         x2 = 0
     end
@@ -23,8 +23,8 @@ function appendLineWithinScreen(x, y, direction)
     local ydir = math.random(1, 2)
     if(ydir == 2) then ydir = -1 end
     local y2 = y + math.random(yMinSpread, yMaxSpread) * ydir
-    if y2 > display.viewableContentHeight-1 then
-        y2 = display.viewableContentHeight - 1
+    if y2 > displayConfig.screenHeight-1 then
+        y2 = displayConfig.screenHeight - 1
     elseif y2 < 0 then
         y2 = 0
     end
@@ -50,8 +50,8 @@ function createLandscape()
 
     -- Create landing pad
     local landingPadWidth = 200
-    local lx = math.random(landingPadWidth, display.viewableContentWidth - landingPadWidth)
-    local ly = display.viewableContentHeight - 400 + math.random(-200, 200)
+    local lx = math.random(landingPadWidth, displayConfig.screenWidth - landingPadWidth)
+    local ly = displayConfig.screenHeight - 400 + math.random(-200, 200)
     local line = display.newLine(lx, ly, lx + landingPadWidth, ly)
     line.name = "landing"
     line:setStrokeColor(0, 1, 0, 1)
@@ -67,13 +67,20 @@ function createLandscape()
     triangle.x = lx + landingPadWidth / 2
 
     print("Looping and creating landscape around landing pad")
-    print("Width of screen:"..display.actualContentWidth)
+    print("Width of screen:"..displayConfig.screenWidth)
     -- Create landscape around landing pad
     -- Create to right
     local x = lx + landingPadWidth
     y = ly
-    while (x < display.actualContentWidth - 1) do 
-    	x, y = appendLineWithinScreen(x, y, 1) 
+    local counter = 0
+    while (x < displayConfig.screenWidth - 1) do 
+    	x, y = appendLineWithinScreen(x, y, 1)
+    	print("x:"..x..",y:"..y)
+    	counter = counter + 1
+    	if counter > 50 then
+    		print("breaking out")
+    		x = displayConfig.screenWidth - 1
+    	end
    	end
 
     -- Create to left
