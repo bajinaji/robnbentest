@@ -21,7 +21,7 @@ local landscape = require("landscape")
 --require "class.class"
 
 local landingSpeeds = {
-    PERFECT_LANDING = 50,
+    PERFECT_LANDING = 65,
     GOOD_LANDING = 100,
     OK_LANDING = 200,
     FAILED_LANDING = 10000
@@ -48,8 +48,6 @@ local uiGroup = display.newGroup() -- Display group for UI objects like the scor
 
 local livesText
 local scoreText
-local lives = 3
-local score = 0
 local died = false
 
 math.randomseed(os.time())
@@ -94,8 +92,8 @@ local function createParticles(x, y)
 end
 
 local function updateText()
-    livesText.text = "Lives: " .. lives
-    scoreText.text = "Score: " .. score
+    livesText.text = "Lives: " .. triangle.stats.lives
+    scoreText.text = "Score: " .. triangle.stats.score
     rotationText.text = "Rot: " .. string.format("%2d", triangle.rotation)
     speedText.text = "Speed: " .. string.format("%2d", vectorLength(triangle:getLinearVelocity()))
 end
@@ -172,20 +170,20 @@ local function landRestoreShip(event)
     local params = event.source.params
     local text
 
-        print("rotationRating:"..params.rotationRating)
-        print("speed:"..string.format("%2d", params.speed))
+    print("rotationRating:"..params.rotationRating)
+    print("speed:"..string.format("%2d", params.speed))
 
     if params.speed <= landingSpeeds.PERFECT_LANDING and params.rotationRating == landingRotations.PERFECT_LANDING then
         text = "Perfect landing"
-        score = score + 100
+        triangle.stats.score = triangle.stats.score + 100
     elseif params.speed <= landingSpeeds.GOOD_LANDING and (params.rotationRating <= landingRotations.GOOD_LANDING) then
         text = "Good landing"
-        score = score + 40
+        triangle.stats.score = triangle.stats.score + 40
     else
         text = "Okay landing"
-        score = score + 10
+        triangle.stats.score = triangle.stats.score + 10
     end
-     print("rating:"..text)
+    print("rating:"..text)
 
     triangle.rotation = 0
     triangle.angularVelocity = 0
@@ -228,26 +226,23 @@ function vectorLength( ... ) -- ( objA ) or ( x1, y1 )
     return len
 end
 
-local function onPlayerColliderGround(self, event)
-
+local function onPlayerCollidedGround(self, event)
     if (died == false) then
         if (event.phase == "began") then
-
             local tooMuch = false
 
             if event.other.name == "landing" then
-                -- Ch
                 local landingSpeed = vectorLength(triangle:getLinearVelocity())
-                --if triangle:rotationRatingForLanding() == landingRotations.FAILED_LANDING then
-                --    tooMuch = true
-                --elseif landingSpeed > landingSpeeds.OK_LANDING then
-                    --tooMuch = true
+                if triangle:rotationRatingForLanding() == landingRotations.FAILED_LANDING then
+                    tooMuch = true
+                elseif landingSpeed > landingSpeeds.OK_LANDING then
+                    tooMuch = true
                 -- If landing successful
-                --else
+                else
                     died = true
                     local tm = timer.performWithDelay(0, landRestoreShip)
                     tm.params = { speed = landingSpeed, rotationRating = triangle:rotationRatingForLanding() }
-                --end
+                end
             end
 
             if event.other.name == "ground" or tooMuch then
@@ -273,6 +268,7 @@ end
 
 function createShip()
     local triangleShape = {0, -40, 37, 40, -37, 40}
+    local triangle
     rotateVertices(triangleShape, 0)
     triangle = display.newPolygon(displayConfig.screenCenterX, 0, triangleShape)
     triangle.status = shipStatus.ALIVE;
@@ -290,17 +286,33 @@ function createShip()
         end
     end
 
+    triangle.rotation = 0
+    -- define the shape table (once created, this can be used multiple times)
+    physics.addBody(triangle, {
+        shape = triangleShape,
+        density = 3.0,
+        friction = 0.3,
+        bounce = 0.2
+    })
+    triangle.linearDamping = 1.0
+    triangle.angularDamping = 4.0
+
+    triangle.collision = onPlayerCollidedGround
+    triangle:addEventListener("collision")
+    triangle.name = "player"
+    triangle.stats = {fuel = 1000, lives = 3, score = 0}
+
     return triangle
 end
 
 function scene:create(event)
-    livesText = display.newText(uiGroup, "Lives: " .. lives, 200, 80,
+    livesText = display.newText(uiGroup, "Lives: ", 200, 80,
                                 native.systemFont, 36)
-    scoreText = display.newText(uiGroup, "Score: " .. score, 400, 80,
+    scoreText = display.newText(uiGroup, "Score: ", 400, 80,
                                 native.systemFont, 36)
-    rotationText = display.newText(uiGroup, "Rot: 0", 600, 80,
+    rotationText = display.newText(uiGroup, "Rot:", 600, 80,
                                    native.systemFont, 36)
-    speedText = display.newText(uiGroup, "Speed: 0", 780, 80,
+    speedText = display.newText(uiGroup, "Speed:", 780, 80,
                                    native.systemFont, 36)
 
     Runtime:addEventListener("enterFrame", updateText)
@@ -332,23 +344,9 @@ function scene:create(event)
     background:setFillColor(.5)
 
     triangle = createShip()
-
     triangle.x = 200
     triangle.y = 300
-    triangle.rotation = 0
-    -- define the shape table (once created, this can be used multiple times)
-    physics.addBody(triangle, {
-        shape = triangleShape,
-        density = 3.0,
-        friction = 0.3,
-        bounce = 0.2
-    })
-    triangle.linearDamping = 1.0
-    triangle.angularDamping = 4.0
 
-    triangle.collision = onPlayerColliderGround
-    triangle:addEventListener("collision")
-    triangle.name = "player"
 
     landscape.createLandscape()
 
